@@ -2,13 +2,14 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 import os
+import requests
 from flask import Flask, request, jsonify, url_for
 from flask_migrate import Migrate
 from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, User, People, Planet
+from models import db, User, People, Planet, Favorite
 #from models import Person
 
 app = Flask(__name__)
@@ -31,6 +32,131 @@ setup_admin(app)
 def handle_invalid_usage(error):
     return jsonify(error.to_dict()), error.status_code
 
+
+# POPULATION DATABASE SWAPI 
+# https://www.swapi.tech/api/people?page=1&limit=5
+
+@app.route("/people/population", methods = ["GET"])
+def get_population():
+
+    # resources = ['planets', 'people']
+    # Del lado del backend, se piden los datos con la libreria requests
+    response  = requests.get("https://www.swapi.tech/api/people?page=1&limit=10")
+    # Se pasan los datos en un formato manipulable (se traducen el json para poder entender)
+    response = response.json()
+    # obtenemos  lo que necesitamos.
+    response = response.get('results')
+    
+
+    for item in response:
+        result = requests.get(item.get("url"))
+        result = result.json()
+        result = result.get("result")
+
+        print(result)
+        # se crea el objeto que queremos agregar
+        people = People()
+
+        # Lo que esta en el resultado del detalla del personaje se le asigna a los registros de la bd
+        people.height = result.get("properties").get("height")
+        people.homeworld = result.get("properties").get("homeworld")
+        people.url = result.get("properties").get("url")
+        people.name = result.get("properties").get('name')
+        people.birth = result.get("properties").get("birth_year")
+        people.gender = result.get("properties").get("gender")
+        people.skin_color = result.get("properties").get("skin_color")
+        people.hair_color = result.get("properties").get("hair_color")
+        people.eye_color = result.get("properties").get("eye_color")
+        
+        try: 
+            db.session.add(people)
+            db.session.commit()
+        except Exception as error:
+            print(error)
+            db.session.rollback()
+            return jsonify("error"),500
+
+    # print(response)
+    return jsonify(["Data loaded"]), 200
+
+
+
+@app.route("/planets/population", methods = ['GET'])
+def get_planet_population():
+
+    response = requests.get("https://www.swapi.tech/api/planets?page=1&limit=5")
+    response = response.json()
+    print(response)
+    response = response.get("results")
+
+    for item in response:
+        result = requests.get(item.get("url"))
+        result = result.json()
+        result = result.get('result')
+
+
+        planet = Planet()
+
+        planet.name = result.get('properties').get('name')
+        planet.clima = result.get("properties").get('climate')
+
+        try: 
+            db.session.add(planet)
+            db.session.commit()
+        except Exception as error:
+            print(error)
+            db.session.rollback()
+            return jsonify("error"),500
+
+
+    return jsonify(['data loaded']),200
+
+@app.route("/people", methods =['GET'])
+def get_people():
+    # creamos un objeto people
+    people = People()
+    # dentro de este objeto, buscamos en la base de datos sus registros
+    people = people.query.all()
+    # le aplicamos el formato serialize
+    people = list(map(lambda item : item.serialize(),people))
+    # devuelve resultado en formato json 
+    return jsonify(people), 200
+
+
+@app.route("/planets", methods = ["GET"])
+def get_planet():
+
+    planet = Planet()
+    planet = planet.query.all()
+    planet = list(map(lambda planet : planet.serialize(),planet))
+    return jsonify(planet),200
+
+
+
+
+@app.route("/people/<int:theid>", methods = ["GET"])
+def get_by_people_id(theid):
+    if theid is not None :
+        people  = People()
+        people= people.query.get(theid)
+        
+        if people is None: 
+            return jsonify(["Ohhh, people doenst exists"]), 404
+        else :
+            return jsonify(people.serialize()), 200
+
+@app.route("/planet/<int:theid>",methods = ["GET"])
+def get_by_planet_id(theid):
+
+    if theid is not None:
+        planet = Planet()
+        planet = planet.query.get(theid)
+
+        if planet is None: 
+            return jsonify(["Ohh planet doesnt exists"]),404
+        else:
+            return jsonify(planet.serialize()),200
+
 # generate sitemap with all your endpoints
 @app.route('/')
 def sitemap():
@@ -49,7 +175,7 @@ def get_users():
 
 @app.route('/user/<int:theid>', methods = ["GET"])
 def get_by_user_id(theid=None):
-    # valida si hay un id
+    # valida si hay un id en la url
     if theid is not None:
         user  = User()
         user = user.query.get(theid)
@@ -61,14 +187,47 @@ def get_by_user_id(theid=None):
         else : 
             return jsonify({
                 "Message" : "User is not found!"
-            }), 200  
+            }),404
     
+
+
+@app.route("/users/favorites/<int:user_id>", methods = ["GET"])
+def get_all_user_favorites(user_id):
+
+    favorite = Favorite()
+    favorite = favorite.query.filter_by(user_id=user_id).all()
+
+    list(map(lambda item : item.serialize(), favorite))
+    return jsonify(["hola mudno"])
+
+
+
+
+
+
+
+@app.route("/favorite/planet/<int:planet_id>", methods = ["POST"])
+def add_planet_favorite(planet_id):
+
+    user_id = 1
+    favorite = Favorite()
+    favorite.user_id = user_id
+    favorite.planet_id = planet_id
+
+    db.session.add(favorite)
+    try:
+        db.session.commit()
+        return jsonify("sE GUARDO EXISTOSAMENTE"),201
+    except Exception as error: 
+        db.session.rollback()
+        return jsonify("Debes revisar"),201   
+
 # ESTANDAR A SEGUIR PARA RESPPUESTAS CON POST
 
 @app.route('/user', methods=['POST'])
 def add_user():
     data  = request.json # recibe lo que el cliente (postman) envia
-    if data.get("name") is None:   # valida si recibimos las propiedades concretas del postman
+    if data.get("name") is None:   # valida si recibimos las propiedades concretas del cliente (postman)
         return jsonify({"message": "user doenst exits"}), 400
     if data.get("email") is None: 
         return jsonify({"message": "user doenst exits"}), 400
