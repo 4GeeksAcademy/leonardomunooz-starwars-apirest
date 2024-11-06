@@ -10,8 +10,9 @@ class User(db.Model):
     name = db.Column(db.String(120), nullable = True)
     email = db.Column(db.String(120), unique=True, nullable=False)
 
+    favorite = db.relationship('Favorite', backref = 'user', uselist = True)
     
-    # password = db.Column(db.String(80), unique=False, nullable=False)
+
 
     def __repr__(self):
         return '<User %r>' % self.name
@@ -20,7 +21,8 @@ class User(db.Model):
         return {
             "id": self.id,
             "name": self.name,
-            "email" : self.email
+            "email" : self.email,
+            "favorites": list(map(lambda item : item.serialize(), self.favorite))
             # do not serialize the password, its a security breach
         }
     
@@ -70,5 +72,7 @@ class Favorite(db.Model):
 
     def serialize(self):
         return {
-            "user_id": self.user_id
+            "user_id": self.user_id,
+            "people_id" :self.people_id,
+            "planet_id" : self.planet_id
         }

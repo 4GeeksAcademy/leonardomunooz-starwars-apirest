@@ -192,23 +192,17 @@ def get_by_user_id(theid=None):
 
 
 @app.route("/users/favorites/<int:user_id>", methods = ["GET"])
-def get_all_user_favorites(user_id):
+def get_all_user_favorites(user_id = None):
 
-    favorite = Favorite()
-    favorite = favorite.query.filter_by(user_id=user_id).all()
+    user = User()
+    user = user.query.filter_by(id = user_id).first()
+    print(user.serialize())
 
-    list(map(lambda item : item.serialize(), favorite))
-    return jsonify(["hola mudno"])
+    return jsonify(user.serialize()),200
 
-
-
-
-
-
-
+# agrega los planetas favoritos del usuario
 @app.route("/favorite/planet/<int:planet_id>", methods = ["POST"])
 def add_planet_favorite(planet_id):
-
     user_id = 1
     favorite = Favorite()
     favorite.user_id = user_id
@@ -217,10 +211,34 @@ def add_planet_favorite(planet_id):
     db.session.add(favorite)
     try:
         db.session.commit()
-        return jsonify("sE GUARDO EXISTOSAMENTE"),201
+        return jsonify("Se ha guardado el planeta en favoritos exitosamente"),201
     except Exception as error: 
         db.session.rollback()
-        return jsonify("Debes revisar"),201   
+        return jsonify("Algo ha ocurrido"),404   
+    
+@app.route("/favorite/planet/<int:planet_id>", methods = ["GET"])
+def del_people_favorite(people_id):
+    return jsonify([]),201
+
+# agrega los peoples favoritos del usuario
+
+@app.route("/favorite/people/<int:people_id>", methods = ["POST"])
+def add_people_favorite(people_id):
+
+    user_id = 2
+    favorite = Favorite()
+    favorite.user_id = user_id
+    favorite.people_id = people_id
+
+    db.session.add(favorite)
+    try:
+        db.session.commit()
+        return jsonify("Se ha guardado people en favoritos exitosamente"),201
+    except Exception as error :
+        db.session.rollback()
+        return jsonify("Algo ha ocurrido"),404
+    
+
 
 # ESTANDAR A SEGUIR PARA RESPPUESTAS CON POST
 
