@@ -53,7 +53,7 @@ def get_population():
         result = result.json()
         result = result.get("result")
 
-        print(result)
+        # print(result)
         # se crea el objeto que queremos agregar
         people = People()
 
@@ -86,7 +86,7 @@ def get_planet_population():
 
     response = requests.get("https://www.swapi.tech/api/planets?page=1&limit=5")
     response = response.json()
-    print(response)
+    # print(response)
     response = response.get("results")
 
     for item in response:
@@ -108,6 +108,7 @@ def get_planet_population():
 
     return jsonify(['data loaded']),200
 
+# Trae todos los people
 @app.route("/people", methods =['GET'])
 def get_people():
     # creamos un objeto people
@@ -129,8 +130,7 @@ def get_planet():
     return jsonify(planet),200
 
 
-
-
+# Trae el detalle de people
 @app.route("/people/<int:theid>", methods = ["GET"])
 def get_by_people_id(theid):
     if theid is not None :
@@ -223,7 +223,7 @@ def del_planet_favorite(planet_id):
 
     user_id = 1
     favorite = Favorite()
-    # Filter_by( columnana = valor )
+    # Filter_by( columna = valor )
     favorite = favorite.query.filter_by(user_id = user_id, planet_id = planet_id).first()
 
     # print(favorite)
@@ -247,8 +247,6 @@ def del_people_favorite(people_id):
     user_id = 2 
     favorite = Favorite()
     favorite = favorite.query.filter_by(user_id =  user_id, people_id = people_id).first()
-
-    print(favorite)
 
     if favorite is None:
         return jsonify("No existe este people"), 404
