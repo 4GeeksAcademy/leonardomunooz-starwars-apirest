@@ -216,7 +216,7 @@ def add_planet_favorite(planet_id):
         db.session.rollback()
         return jsonify("Algo ha ocurrido"),404   
     
-@app.route("/favorite/planet/<int:planet_id>", methods = ["GET"])
+@app.route("/favorite/planet/<int:planet_id>", methods = ["DELETE"])
 def del_people_favorite(people_id):
     return jsonify([]),201
 
@@ -277,8 +277,8 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=PORT, debug=False)
 
 
-    # response_body = {
-    #     "msg": "Hello, this is your GET /user response "
-    # }
 
-    # return jsonify(response_body), 200
+# PREGUNTAS 
+
+# Como correr los populates desde un archivo externo al proyecto
+# Como implementar el metodo Delete
