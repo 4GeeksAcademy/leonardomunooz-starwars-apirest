@@ -93,10 +93,7 @@ def get_planet_population():
         result = requests.get(item.get("url"))
         result = result.json()
         result = result.get('result')
-
-
         planet = Planet()
-
         planet.name = result.get('properties').get('name')
         planet.clima = result.get("properties").get('climate')
 
@@ -179,7 +176,7 @@ def get_by_user_id(theid=None):
     if theid is not None:
         user  = User()
         user = user.query.get(theid)
-        print(user)
+        # print(user)
         
        # cuando la base de data no consigue algo responde un null (None) (utilizando querys)
         if user is not None : 
@@ -205,6 +202,11 @@ def get_all_user_favorites(user_id = None):
 def add_planet_favorite(planet_id):
     user_id = 1
     favorite = Favorite()
+    fav_planet = favorite.query.filter_by(user_id = user_id, planet_id = planet_id).first()
+
+    if fav_planet is not  None:
+        return jsonify({"msg":"Este favorito ya existe"}) , 400
+    
     favorite.user_id = user_id
     favorite.planet_id = planet_id
 
@@ -217,11 +219,51 @@ def add_planet_favorite(planet_id):
         return jsonify("Algo ha ocurrido"),404   
     
 @app.route("/favorite/planet/<int:planet_id>", methods = ["DELETE"])
+def del_planet_favorite(planet_id):
+
+    user_id = 1
+    favorite = Favorite()
+    # Filter_by( columnana = valor )
+    favorite = favorite.query.filter_by(user_id = user_id, planet_id = planet_id).first()
+
+    # print(favorite)
+    if favorite is  None:
+        return jsonify({"msg": "No existe el planeta"}), 404
+    
+    db.session.delete(favorite)
+    try:
+        db.session.commit()
+        return jsonify("Se ha eliminado el planeta"), 200
+    except Exception as error :
+        db.session.rollback()
+        return jsonify("Algo ha ocurrido"),404
+    
+
+
+ # ELIMINA UN FAVORITO DE PEOPLE 
+@app.route("/favorite/people/<int:people_id>", methods = ['DELETE'])
 def del_people_favorite(people_id):
-    return jsonify([]),201
 
-# agrega los peoples favoritos del usuario
+    user_id = 2 
+    favorite = Favorite()
+    favorite = favorite.query.filter_by(user_id =  user_id, people_id = people_id).first()
 
+    print(favorite)
+
+    if favorite is None:
+        return jsonify("No existe este people"), 404
+
+    db.session.delete(favorite)
+    try:
+        db.session.commit()
+        return jsonify("Se ha eliminado el people"), 200        
+    except Exception as error :
+        db.session.rollback()
+        return jsonify("Algo ha ocurrido"),404
+        
+
+
+# Agrega los peoples favoritos del usuario
 @app.route("/favorite/people/<int:people_id>", methods = ["POST"])
 def add_people_favorite(people_id):
 
@@ -230,8 +272,10 @@ def add_people_favorite(people_id):
     favorite.user_id = user_id
     favorite.people_id = people_id
 
+    # guarda los datos en la tabla
     db.session.add(favorite)
     try:
+        # commit compromete los datos para ser guardado
         db.session.commit()
         return jsonify("Se ha guardado people en favoritos exitosamente"),201
     except Exception as error :
@@ -268,17 +312,7 @@ def add_user():
     else : 
         return jsonify({"Message": "El usuario existe"}), 400
 
-
-
-
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
     PORT = int(os.environ.get('PORT', 3000))
     app.run(host='0.0.0.0', port=PORT, debug=False)
-
-
-
-# PREGUNTAS 
-
-# Como correr los populates desde un archivo externo al proyecto
-# Como implementar el metodo Delete
